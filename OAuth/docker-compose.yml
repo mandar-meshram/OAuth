@@ -1,0 +1,31 @@
+services:
+  # Define the auth microservice
+  auth_service:
+    build: ./auth_service  # Path to Dockerfile
+    container_name: auth_service  # Friendly name for container
+    ports:
+      - "8000:8000"  # Expose port 8000 on both host and container
+    volumes:
+      - ./auth_service:/app  # Mount local code to container for live updates
+    env_file:
+      - ./auth_service/.env  # Load environment variables from .env file
+    depends_on:
+      - redis  # Wait for Redis to start before starting auth service
+    restart: always  # Restart automatically if the container stops
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      
+  redis:
+    image: redis:latest
+    container_name: redis_cache
+    ports:
+      - "6379:6379"
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

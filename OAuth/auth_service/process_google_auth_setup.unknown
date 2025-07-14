@@ -1,0 +1,214 @@
+# Google OAuth Setup Guide - Step by Step
+
+## Prerequisites
+- A Google account (Gmail account)
+- Your FastAPI application ready with OAuth code
+
+---
+
+## Step 1: Access Google Cloud Console
+
+1. **Open your web browser**
+2. **Go to**: [https://console.cloud.google.com/](https://console.cloud.google.com/)
+3. **Sign in** with your Google account (Gmail)
+
+---
+
+## Step 2: Create a New Project
+
+1. **Click the project dropdown** at the top of the page (next to "Google Cloud")
+2. **Click "New Project"** button
+3. **Fill in project details:**
+   - **Project name**: `auth-service-project` (or any name you prefer)
+   - **Organization**: Leave as default
+   - **Location**: Leave as default
+4. **Click "Create"**
+5. **Wait** for the project to be created (usually 10-30 seconds)
+6. **Select your new project** from the dropdown to make it active
+
+---
+
+## Step 3: Enable Required APIs
+
+1. **Go to "APIs & Services"** from the left menu
+2. **Click "Library"**
+3. **Search for**: `Google Identity Services API`
+4. **Click on "Google Identity Services API"**
+5. **Click "Enable"** button
+6. **Wait** for the API to be enabled
+
+*Alternative: You can also search for and enable "Google+ API" if available*xx
+
+---
+
+## Step 4: Configure OAuth Consent Screen
+
+**This step is CRUCIAL - your OAuth won't work without it!**
+
+1. **Go to "APIs & Services" → "OAuth consent screen"**
+2. **Choose "External"** (unless you have Google Workspace)
+3. **Click "Create"**
+
+### Fill in Required Information:
+4. **App Information:**
+   - **App name**: `My Auth App` (or your app name)
+   - **User support email**: Your email address
+   - **App logo**: Skip for now (optional)
+
+5. **App domain** (optional for development):
+   - Leave blank for now
+
+6. **Developer contact information:**
+   - **Email addresses**: Your email address
+
+7. **Click "Save and Continue"**
+
+### Scopes Page:
+8. **Click "Save and Continue"** (no changes needed)
+
+### Test Users Page:
+9. **Click "Add Users"**
+10. **Add your email address** and any other emails you want to test with
+11. **Click "Save and Continue"**
+
+### Summary Page:
+12. **Review your settings**
+13. **Click "Back to Dashboard"**
+
+---
+
+## Step 5: Create OAuth 2.0 Credentials
+
+1. **Go to "APIs & Services" → "Credentials"**
+2. **Click "+ CREATE CREDENTIALS"**
+3. **Select "OAuth 2.0 Client IDs"**
+
+### Configure OAuth Client:
+4. **Application type**: Select **"Web application"**
+5. **Name**: `Auth Service Web Client` (or any descriptive name)
+
+6. **Authorized JavaScript origins:**
+   - Click "Add URI"
+   - Add: `http://localhost:8000`
+   - Click "Add URI" again
+   - Add: `http://127.0.0.1:8000`
+
+7. **Authorized redirect URIs:**
+   - Click "Add URI"
+   - Add: `http://localhost:8000/auth/callback`
+   - Click "Add URI" again  
+   - Add: `http://127.0.0.1:8000/auth/callback`
+
+8. **Click "Create"**
+
+---
+
+## Step 6: Get Your Credentials
+
+1. **A popup will appear** with your credentials
+2. **Copy the "Client ID"** - it looks like:
+   ```
+   214868789484-abcdefghijklmnop.apps.googleusercontent.com
+   ```
+3. **Copy the "Client Secret"** - it looks like:
+   ```
+   GOCSPX-abcdefghijklmnopqrstuvwxyz
+   ```
+4. **Click "OK"**
+
+**Important**: Keep these credentials safe - don't share them publicly!
+
+---
+
+## Step 7: Update Your Application
+
+Create or update your `.env` file in the `auth_service` folder:
+
+```bash
+# auth_service/.env
+GOOGLE_CLIENT_ID=your-actual-client-id-here
+GOOGLE_CLIENT_SECRET=your-actual-client-secret-here
+SECRET_KEY=your-generated-secret-key
+```
+
+### Generate a Secret Key:
+Open Python and run:
+```python
+import secrets
+print(secrets.token_urlsafe(32))
+```
+Copy the output as your SECRET_KEY.
+
+---
+
+## Step 8: Test Your Setup
+
+1. **Rebuild your Docker containers:**
+   ```bash
+   docker compose down
+   docker compose build --no-cache
+   docker compose up -d
+   ```
+
+2. **Open your browser** and go to: `http://localhost:8000`
+3. **Click "Sign in with Google"**
+4. **You should see Google's consent screen**
+5. **Click "Continue"** or "Allow"
+6. **You should be redirected back to your app** with a success message
+
+---
+
+## Common Issues & Solutions
+
+### Issue: "This app isn't verified"
+**Solution**: Click "Advanced" → "Go to [App Name] (unsafe)" - this is normal for development
+
+### Issue: "redirect_uri_mismatch"
+**Solution**: 
+- Check that your redirect URIs in Google Console exactly match your code
+- Make sure you're accessing your app with `http://localhost:8000` (not `127.0.0.1`)
+
+### Issue: "OAuth client was not found"
+**Solution**: 
+- Double-check your Client ID is correct in the .env file
+- Make sure there are no extra spaces in your credentials
+
+### Issue: App doesn't start
+**Solution**: 
+- Check Docker logs: `docker compose logs auth_service`
+- Verify your .env file is in the correct location (`auth_service/.env`)
+
+---
+
+## Security Notes
+
+✅ **Do**: Keep your Client Secret private  
+✅ **Do**: Use different credentials for development and production  
+✅ **Do**: Add your .env file to .gitignore  
+❌ **Don't**: Commit credentials to version control  
+❌ **Don't**: Share your Client Secret publicly  
+
+---
+
+## For Production Deployment
+
+When you deploy to production:
+
+1. **Create a new OAuth client** in Google Console
+2. **Update redirect URIs** to your production domain:
+   ```
+   https://yourdomain.com/auth/callback
+   ```
+3. **Update JavaScript origins**:
+   ```
+   https://yourdomain.com
+   ```
+4. **Use environment variables** in your production environment
+5. **Consider getting your app verified** for public use
+
+
+
+## Congratulations!
+
+You've successfully set up Google OAuth authentication. 
+Your users can now sign in with their Google accounts securely.
