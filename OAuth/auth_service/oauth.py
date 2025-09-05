@@ -10,15 +10,15 @@ import os
 from dotenv import load_dotenv
 
 
-# Load environment variables from .env file
+
 load_dotenv()
 
 router = APIRouter()
 
-# OAuth config - use environment variavles
+
 config = Config()
 
-# Verify that environment variables are set
+
 google_client_id = os.getenv('GOOGLE_CLIENT_ID')
 google_client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
 
@@ -42,7 +42,7 @@ else:
         }
     )
 
-# Dependency to get database session
+
 def get_db():
     db = SessionLocal()
     try:
@@ -67,7 +67,7 @@ async def login_via_google(request : Request):
 ''',
             status_code=500
         )
-    # Use the same scheme and host as the incoming request
+    
     base_url = f'{request.url.scheme}://{request.url.netloc}'
     redirect_url = f'{base_url}/auth/callback'
 
@@ -75,7 +75,7 @@ async def login_via_google(request : Request):
     print(f'DEBUG: Session data before redirect: {request.session}')
 
     try:
-        # Clear any existing session data that might interfere
+        
         if hasattr(request, 'session'):
             request.session.clear()
 
@@ -99,11 +99,11 @@ async def auth_callback(request: Request, db: Session = Depends(get_db)):
     print(f'DEBUG: Query params: {dict(request.query_params)}')
 
     try:
-        # get authorization token
+        
         token = await oauth.google.authorize_access_token(request)
         print(f'DEBUG: Token received: {token.keys() if token else 'No token'}')
 
-        # Try to get user info from ID token first
+        
         user_info = None
         if 'id_token' in token:
             try:
@@ -112,7 +112,7 @@ async def auth_callback(request: Request, db: Session = Depends(get_db)):
             except Exception as e:
                 print(f'DEBUG: Failed to parse ID token: {e}')
 
-        # If no ID token or parsing failed, get user info from userinfo endpoint
+        
         if not user_info:
             print('DEBUG: Fetching user info from userinfo endpoint')
             resp = await oauth.google.get('https://www.googleapis.com/oauth2/v2/userinfo', token=token)
@@ -122,15 +122,14 @@ async def auth_callback(request: Request, db: Session = Depends(get_db)):
         if not user_info or 'email' not in user_info:
             raise Exception('Could not get user email from Google')
             
-        # Check if user exists in database
+       
         existing_user = db.query(User).filter(User.username == user_info['email']).first()
 
         if not existing_user:
-            # Create new user if not exists
             new_user = User(
                 username=user_info['email'],
-                hashed_password='',  # No password needed for OAuth users
-                role='user'  # Default role
+                hashed_password='',  
+                role='user'  
             )
             db.add(new_user)
             db.commit()
@@ -139,13 +138,13 @@ async def auth_callback(request: Request, db: Session = Depends(get_db)):
         else:
             print(f'DEBUG: Found existing user: {user_info['email']}')
 
-        # Create JWT token for the user
+        
         jwt_token = create_jwt_token(existing_user.username, existing_user.role)
 
-        # Get user name, fallback to email if not available
+        
         username = user_info.get('name', user_info.get('email', 'User'))
 
-        # Redirect to welcome page with username
+        
         response = RedirectResponse(
             url=f'/welcome?username={username}',
             status_code=302
@@ -154,7 +153,7 @@ async def auth_callback(request: Request, db: Session = Depends(get_db)):
         key="access_token",
         value=jwt_token,
         httponly=True,
-        secure=True,  # Set to True in production with HTTPS
+        secure=True,  
         samesite="lax"
         )
         return response
@@ -164,7 +163,7 @@ async def auth_callback(request: Request, db: Session = Depends(get_db)):
         import traceback
         print(f"DEBUG: Full traceback: {traceback.format_exc()}")
         
-        # Handle OAuth errors
+        
         return HTMLResponse(
             content=f"""
             <h1>Authentication Error</h1>
